@@ -1,0 +1,59 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Optional PromiseProbe notes API. Conditional writes and idempotency keys on DynamoDB. The default demo does not deploy this.
+
+Globals:
+  Function:
+    Timeout: 10
+    Runtime: nodejs20.x
+    Architectures:
+      - x86_64
+
+Resources:
+  NotesApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: prod
+
+  NotesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: pk
+          AttributeType: S
+      KeySchema:
+        - AttributeName: pk
+          KeyType: HASH
+
+  NotesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: handler.handler
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref NotesTable
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref NotesTable
+      Events:
+        CreateNote:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref NotesApi
+            Method: POST
+            Path: /notes
+        ListNotes:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref NotesApi
+            Method: GET
+            Path: /notes
+
+Outputs:
+  ApiUrl:
+    Description: HTTP API origin. Routes are /notes.
+    Value: !Sub 'https://${NotesApi}.execute-api.${AWS::Region}.amazonaws.com/prod'
+  TableName:
+    Value: !Ref NotesTable

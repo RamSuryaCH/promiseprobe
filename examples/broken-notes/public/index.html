@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Notes</title>
+  <style>
+    :root { color-scheme: light; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #efece4; color: #1c1915; font: 16px/1.45 "Segoe UI", sans-serif; }
+    main { width: min(440px, calc(100% - 32px)); background: white; padding: 28px 24px 22px; border-radius: 16px; }
+    h1 { font-size: 22px; margin: 0 0 4px; }
+    .lede { margin: 0 0 18px; color: #5e584f; }
+    label { display: block; font-size: 13px; margin-bottom: 6px; }
+    textarea { width: 100%; box-sizing: border-box; min-height: 96px; padding: 10px 12px; border: 1px solid #d9d3c8; border-radius: 10px; font: inherit; resize: vertical; }
+    button { margin-top: 12px; background: #1c1915; color: white; border: 0; border-radius: 999px; padding: 10px 18px; font: inherit; cursor: pointer; }
+    #status { min-height: 1.4em; font-weight: 650; }
+    h2 { font-size: 13px; font-weight: 650; margin: 22px 0 6px; color: #5e584f; }
+    ul { margin: 0; padding-left: 18px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Notes</h1>
+    <p class="lede">Jot something down.</p>
+    <label for="note">Note</label>
+    <textarea id="note"></textarea>
+    <button type="button" id="save" data-promiseprobe-action>Save</button>
+    <p id="status" data-testid="status" role="status"></p>
+    <h2>Shown on this page</h2>
+    <ul id="saved"></ul>
+  </main>
+  <script>
+    // Seeded defects, all visible from one click:
+    //   optimistic-indicator — "Saved" is painted before any write exists.
+    //   restart-loses-note — the POST is scheduled DEFER_MS later, so a
+    //     restart in that window loses the note.
+    //   lost-ack-duplicate — a timeout retries with a brand-new POST.
+    //   double-submit — nothing ignores a second click.
+    const DEFER_MS = 2000;
+    const ATTEMPT_TIMEOUT_MS = 1200;
+    const status = document.getElementById('status');
+    const note = document.getElementById('note');
+    const saved = document.getElementById('saved');
+    const echo = [];
+
+    document.getElementById('save').addEventListener('click', () => {
+      const text = note.value.trim();
+      if (!text) return;
+      status.textContent = 'Saved ✓';
+      echo.push(text);
+      render();
+      setTimeout(() => { void send(text, true); }, DEFER_MS);
+    });
+
+    function render() {
+      saved.replaceChildren();
+      for (const text of echo) {
+        const li = document.createElement('li');
+        li.textContent = text;
+        saved.appendChild(li);
+      }
+    }
+
+    async function send(text, allowRetry) {
+      try {
+        const res = await fetch('/api/notes', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ text }),
+          signal: AbortSignal.timeout(ATTEMPT_TIMEOUT_MS),
+        });
+        await res.json().catch(() => undefined);
+        if (!res.ok) throw new Error(String(res.status));
+      } catch {
+        if (allowRetry) await send(text, false);
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+node_modules/
+dist/
+reports/
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+examples/aws-backend/node_modules/
+examples/aws-backend/.aws-sam/
+*.log
+.env
+.DS_Store
