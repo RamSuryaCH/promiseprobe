@@ -1,0 +1,9 @@
+{
+  "name": "promiseprobe-notes-aws",
+  "private": true,
+  "description": "Optional PromiseProbe reference API: API Gateway, Lambda, and DynamoDB.",
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.699.0",
+    "@aws-sdk/util-dynamodb": "^3.699.0"
+  }
+}
